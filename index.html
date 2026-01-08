@@ -61,15 +61,12 @@
 
     .progress{ text-align:center; color:#6b7280; font-size:.9rem; margin:.55rem 0 .3rem; }
 
-    /* --- Rechteck-Modell --- */
+    /* --- Visualisierung ohne blauen Rahmen --- */
     .model-wrap{
       margin: .75rem auto .9rem;
       max-width: 520px;
-      border-radius:18px;
-      border:6px solid #1d4ed8;
-      padding: 12px;
-      box-sizing:border-box;
-      background:#fff;
+      padding: 0;
+      background: transparent;
     }
     .model-top{
       display:flex;
@@ -86,19 +83,18 @@
       color:#6b7280;
       font-size:.85rem;
     }
-
     .rect-stage{
       display:flex;
       align-items:center;
       justify-content:center;
-      padding: 10px 8px 6px;
+      padding: 10px 0 6px;
     }
 
-    /* Das Rechteck selbst */
+    /* Rechteck: spitze Ecken */
     .rect{
       position: relative;
       border: 4px solid #111827;
-      border-radius: 14px;
+      border-radius: 0px;          /* <- spitz */
       background: #f8fafc;
       box-shadow: inset 0 0 0 2px rgba(17,24,39,0.06);
       width: 360px;
@@ -106,7 +102,6 @@
       max-width: 100%;
     }
 
-    /* Labels (oben: Breite, links: Höhe) */
     .label-top{
       position:absolute;
       top: -14px;
@@ -136,15 +131,13 @@
       color:#111827;
       white-space:nowrap;
     }
-
-    /* Mitte: Produkt */
     .label-center{
       position:absolute;
       left: 50%;
       top: 50%;
       transform: translate(-50%,-50%);
       background:#ffffff;
-      border-radius: 18px;
+      border-radius: 0px;          /* <- spitz */
       border: 2px solid #e5e7eb;
       padding: 10px 16px;
       font-weight: 1000;
@@ -154,11 +147,7 @@
       min-width: 90px;
     }
 
-    /* rotes Fragezeichen */
-    .q{
-      color:#b91c1c;
-      font-weight:1000;
-    }
+    .q{ color:#b91c1c; font-weight:1000; }
 
     .equation{
       text-align:center;
@@ -215,10 +204,7 @@
     }
 
     .hidden{ display:none; }
-
-    .result{
-      text-align:center;
-    }
+    .result{ text-align:center; }
   </style>
 </head>
 <body>
@@ -226,14 +212,14 @@
     <h1>Einmaleins bis 20</h1>
     <div class="subtitle">
       Rechteck-Modell: Länge · Breite = Produkt<br>
-      Manchmal suchst du einen Faktor, manchmal das Produkt – auch bei Division.
+      Rotes <b>?</b> = gesuchte Zahl
     </div>
 
     <div class="row">
       <button class="mode-btn active" id="mode-mix" type="button">Mix</button>
       <button class="mode-btn" id="mode-mul" type="button">Nur ×</button>
       <button class="mode-btn" id="mode-div" type="button">Nur ÷</button>
-      <span class="chip">Faktoren 1–20</span>
+      <span class="chip">2–10 und 2–20 (nur einer >10)</span>
     </div>
 
     <div id="quiz">
@@ -242,7 +228,7 @@
       <div class="model-wrap">
         <div class="model-top">
           <div id="task-type">—</div>
-          <div class="hint">Rotes ? = gesuchte Zahl</div>
+          <div class="hint">Rotes ? = gesucht</div>
         </div>
 
         <div class="rect-stage">
@@ -280,8 +266,15 @@
 
 <script>
   const TOTAL_QUESTIONS = 30;
-  const MIN_F = 1;
-  const MAX_F = 20;
+
+  // Vorgabe:
+  // Faktor A: 2..10
+  // Faktor B: 2..20
+  // Niemals dürfen beide >10 sein (also nur einer darf >10).
+  // -> umgesetzt, indem wir IMMER einen aus 2..10 ziehen und den anderen aus 2..20 ziehen.
+  //    Dann ist automatisch nur der 2..20-Faktor evtl. >10.
+  const SMALL_MIN = 2, SMALL_MAX = 10;
+  const BIG_MIN = 2, BIG_MAX = 20;
 
   // Mode: "mix" | "mul" | "div"
   let mode = "mix";
@@ -291,7 +284,7 @@
   let correctFirst = 0;
   let wrongTotal = 0;
 
-  let current = null; // {type, a, b, p, unknown, displayParts, answer}
+  let current = null;
 
   const elProgress = document.getElementById('progress');
   const elTaskType = document.getElementById('task-type');
@@ -348,11 +341,14 @@
     attemptsCurrent = 0;
     correctFirst = 0;
     wrongTotal = 0;
+
     statCorrect.textContent = "0";
     statFirst.textContent = "0";
     statWrong.textContent = "0";
+
     fb.textContent = "";
     fb.className = "feedback";
+
     next();
   }
 
@@ -370,14 +366,29 @@
   }
 
   // Task types:
-  // MUL_PRODUCT: a × b = ?  (unknown = product)
-  // MUL_FACTOR_A: ? × b = p (unknown = a)
-  // MUL_FACTOR_B: a × ? = p (unknown = b)
-  // DIV_QUOTIENT: p ÷ b = ? (unknown = a)  (a = quotient)
-  // DIV_DIVISOR:  p ÷ ? = a (unknown = b)  (b = divisor)
+  // MUL_PRODUCT: a × b = ?  (Produkt gesucht)
+  // MUL_FACTOR_A: ? × b = p (Faktor gesucht)
+  // MUL_FACTOR_B: a × ? = p (Faktor gesucht)
+  // DIV_QUOTIENT: p ÷ b = ? (Quotient gesucht = a)
+  // DIV_DIVISOR:  p ÷ ? = a (Teiler gesucht = b)
   function generateTask(){
-    const a = randInt(MIN_F, MAX_F);
-    const b = randInt(MIN_F, MAX_F);
+    // Regel-konforme Faktoren:
+    // small in 2..10, big in 2..20
+    // Zufällig entscheiden, welcher Faktor (a oder b) der "small" ist.
+    const small = randInt(SMALL_MIN, SMALL_MAX);
+    const big = randInt(BIG_MIN, BIG_MAX);
+
+    let a, b;
+    if (Math.random() < 0.5) { a = small; b = big; }
+    else { a = big; b = small; }
+
+    // Zusatzregel explizit (zur Sicherheit): nicht beide >10
+    // (Durch Konstruktion erfüllt, aber wir lassen die Absicherung drin.)
+    if (a > 10 && b > 10) {
+      // falls es je passieren würde, korrigieren wir b auf small
+      b = randInt(SMALL_MIN, SMALL_MAX);
+    }
+
     const p = a * b;
 
     const typesMul = ["MUL_PRODUCT","MUL_FACTOR_A","MUL_FACTOR_B"];
@@ -388,13 +399,10 @@
     else if (mode === "div") t = choice(typesDiv);
     else t = choice(typesMul.concat(typesDiv));
 
-    // Damit Division sauber bleibt: wir nutzen p = a*b immer ganzzahlig.
     return { type: t, a, b, p };
   }
 
   function renderTask(task){
-    // Standardwerte fürs Rechteck:
-    // Breite = b, Höhe = a, Mitte = p (je nach gesuchter Zahl mit rotem ?)
     let topTxt = String(task.b);
     let leftTxt = String(task.a);
     let centerTxt = String(task.p);
@@ -407,7 +415,6 @@
 
     switch(task.type){
       case "MUL_PRODUCT":
-        // a × b = ?
         typeLabel = "Multiplikation – Produkt suchen";
         topTxt = String(task.b);
         leftTxt = String(task.a);
@@ -417,7 +424,6 @@
         break;
 
       case "MUL_FACTOR_A":
-        // ? × b = p  (a gesucht)
         typeLabel = "Multiplikation – Faktor suchen";
         topTxt = String(task.b);
         leftTxt = Q;
@@ -427,7 +433,6 @@
         break;
 
       case "MUL_FACTOR_B":
-        // a × ? = p  (b gesucht)
         typeLabel = "Multiplikation – Faktor suchen";
         topTxt = Q;
         leftTxt = String(task.a);
@@ -437,9 +442,7 @@
         break;
 
       case "DIV_QUOTIENT":
-        // p ÷ b = ?  (a gesucht)
         typeLabel = "Division – Ergebnis suchen";
-        // Rechteckmodell: Produkt in Mitte = p, Breite = b, Höhe = ? (a)
         topTxt = String(task.b);
         leftTxt = Q;
         centerTxt = String(task.p);
@@ -448,7 +451,6 @@
         break;
 
       case "DIV_DIVISOR":
-        // p ÷ ? = a  (b gesucht)
         typeLabel = "Division – Teiler suchen";
         topTxt = Q;
         leftTxt = String(task.a);
@@ -461,24 +463,17 @@
     task.answer = correctAnswer;
 
     elTaskType.textContent = typeLabel;
-    elEquation.innerHTML = eq.replaceAll("?", Q); // rotes ? auch in Gleichung
+    elEquation.innerHTML = eq.replaceAll("?", Q);
 
     elTop.innerHTML = topTxt;
     elLeft.innerHTML = leftTxt;
     elCenter.innerHTML = centerTxt;
 
-    // Rechteck skalieren nach Faktoren (optisch, aber begrenzt)
-    // Breite ~ b, Höhe ~ a (immer mit den echten Faktoren, auch wenn ?)
+    // Rechteck skalieren: Breite ~ b, Höhe ~ a (optisch begrenzt)
     const rect = document.getElementById('rect');
-    const scaleW = (task.b / MAX_F);
-    const scaleH = (task.a / MAX_F);
 
-    // Basismass + Skalierung (nicht zu klein / nicht zu gross)
-    const baseW = 240, baseH = 160;
-    const extraW = 220, extraH = 170;
-
-    const w = clamp(baseW + extraW * scaleW, 240, 520);
-    const h = clamp(baseH + extraH * scaleH, 160, 420);
+    const w = clamp(240 + 280 * (task.b / 20), 240, 540);
+    const h = clamp(160 + 260 * (task.a / 20), 160, 440);
 
     rect.style.width = w + "px";
     rect.style.height = h + "px";
@@ -537,7 +532,6 @@
       `<strong>${correctFirst}</strong> waren beim ersten Versuch richtig (<strong>${quote}%</strong>).<br>` +
       `Falsche Versuche insgesamt: <strong>${wrongTotal}</strong>.`;
 
-    // LearningView: Aufgabe erledigt
     try{
       if(window.parent && window.parent !== window){
         window.parent.postMessage('AppSolved','*');
