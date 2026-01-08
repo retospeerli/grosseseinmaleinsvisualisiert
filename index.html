@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Einmaleins bis 20 – Rechteck-Modell</title>
+  <style>
+    :root{
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:#f3f4f6;
+    }
+    body{
+      margin:0; min-height:100vh;
+      display:flex; align-items:center; justify-content:center;
+      padding:14px;
+    }
+    .app{
+      background:#fff;
+      border-radius:16px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.1);
+      padding: 1.7rem 1.8rem;
+      max-width: 620px;
+      width:100%;
+      box-sizing:border-box;
+    }
+    h1{ margin:0; text-align:center; font-size:1.6rem; }
+    .subtitle{
+      text-align:center; color:#4b5563;
+      margin: .45rem 0 1.05rem;
+      font-size: .95rem;
+      line-height:1.25rem;
+    }
+    .row{
+      display:flex; gap:.6rem; flex-wrap:wrap;
+      align-items:center; justify-content:center;
+      margin: .6rem 0 .2rem;
+    }
+    .chip{
+      border-radius:999px;
+      background:#eff6ff;
+      color:#1d4ed8;
+      font-weight:700;
+      font-size:.85rem;
+      padding:.25rem .7rem;
+      border:1px solid #bfdbfe;
+    }
+    .mode-btn{
+      padding:.5rem .9rem;
+      border-radius:999px;
+      border:2px solid #d1d5db;
+      background:#f9fafb;
+      cursor:pointer;
+      font-weight:700;
+    }
+    .mode-btn.active{
+      background:#2563eb;
+      color:#fff;
+      border-color:#1d4ed8;
+      box-shadow:0 5px 15px rgba(37,99,235,.25);
+    }
+
+    .progress{ text-align:center; color:#6b7280; font-size:.9rem; margin:.55rem 0 .3rem; }
+
+    /* --- Rechteck-Modell --- */
+    .model-wrap{
+      margin: .75rem auto .9rem;
+      max-width: 520px;
+      border-radius:18px;
+      border:6px solid #1d4ed8;
+      padding: 12px;
+      box-sizing:border-box;
+      background:#fff;
+    }
+    .model-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+      font-weight:800;
+      color:#111827;
+      font-size:1.05rem;
+    }
+    .hint{
+      font-weight:700;
+      color:#6b7280;
+      font-size:.85rem;
+    }
+
+    .rect-stage{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 10px 8px 6px;
+    }
+
+    /* Das Rechteck selbst */
+    .rect{
+      position: relative;
+      border: 4px solid #111827;
+      border-radius: 14px;
+      background: #f8fafc;
+      box-shadow: inset 0 0 0 2px rgba(17,24,39,0.06);
+      width: 360px;
+      height: 220px;
+      max-width: 100%;
+    }
+
+    /* Labels (oben: Breite, links: Höhe) */
+    .label-top{
+      position:absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background:#fff;
+      padding: 2px 10px;
+      border-radius:999px;
+      border:1px solid #e5e7eb;
+      font-weight:900;
+      font-size:1.1rem;
+      color:#111827;
+      white-space:nowrap;
+    }
+    .label-left{
+      position:absolute;
+      left: -14px;
+      top: 50%;
+      transform: translateY(-50%) rotate(-90deg);
+      transform-origin:center;
+      background:#fff;
+      padding: 2px 10px;
+      border-radius:999px;
+      border:1px solid #e5e7eb;
+      font-weight:900;
+      font-size:1.1rem;
+      color:#111827;
+      white-space:nowrap;
+    }
+
+    /* Mitte: Produkt */
+    .label-center{
+      position:absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%,-50%);
+      background:#ffffff;
+      border-radius: 18px;
+      border: 2px solid #e5e7eb;
+      padding: 10px 16px;
+      font-weight: 1000;
+      font-size: 2rem;
+      color:#111827;
+      text-align:center;
+      min-width: 90px;
+    }
+
+    /* rotes Fragezeichen */
+    .q{
+      color:#b91c1c;
+      font-weight:1000;
+    }
+
+    .equation{
+      text-align:center;
+      font-size: 2rem;
+      font-weight: 800;
+      margin: .55rem 0 .2rem;
+      color:#111827;
+    }
+
+    input[type="number"]{
+      width:100%;
+      padding:.75rem .9rem;
+      font-size:1.25rem;
+      border-radius:10px;
+      border:1px solid #d1d5db;
+      box-sizing:border-box;
+      text-align:center;
+    }
+    input[type="number"]:focus{
+      outline:none;
+      border-color:#2563eb;
+      box-shadow:0 0 0 2px rgba(37,99,235,.2);
+    }
+
+    .primary-btn{
+      margin-top:.85rem;
+      width:100%;
+      padding:.75rem 1rem;
+      font-size:1.1rem;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      background:#2563eb;
+      color:#fff;
+      font-weight:800;
+    }
+    .primary-btn:hover{ background:#1d4ed8; }
+    .primary-btn:active{ transform: translateY(1px); }
+
+    .feedback{
+      min-height:1.4rem;
+      margin-top:.45rem;
+      text-align:center;
+      font-weight:700;
+    }
+    .feedback.ok{ color:#15803d; }
+    .feedback.error{ color:#b91c1c; }
+
+    .stats{
+      margin-top: .9rem;
+      font-size:.95rem;
+      color:#374151;
+      line-height:1.35rem;
+    }
+
+    .hidden{ display:none; }
+
+    .result{
+      text-align:center;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>Einmaleins bis 20</h1>
+    <div class="subtitle">
+      Rechteck-Modell: Länge · Breite = Produkt<br>
+      Manchmal suchst du einen Faktor, manchmal das Produkt – auch bei Division.
+    </div>
+
+    <div class="row">
+      <button class="mode-btn active" id="mode-mix" type="button">Mix</button>
+      <button class="mode-btn" id="mode-mul" type="button">Nur ×</button>
+      <button class="mode-btn" id="mode-div" type="button">Nur ÷</button>
+      <span class="chip">Faktoren 1–20</span>
+    </div>
+
+    <div id="quiz">
+      <div class="progress" id="progress"></div>
+
+      <div class="model-wrap">
+        <div class="model-top">
+          <div id="task-type">—</div>
+          <div class="hint">Rotes ? = gesuchte Zahl</div>
+        </div>
+
+        <div class="rect-stage">
+          <div class="rect" id="rect">
+            <div class="label-top" id="label-top">—</div>
+            <div class="label-left" id="label-left">—</div>
+            <div class="label-center" id="label-center">—</div>
+          </div>
+        </div>
+
+        <div class="equation" id="equation">_ × _ = _</div>
+      </div>
+
+      <input type="number" id="answer" placeholder="Deine Antwort" autocomplete="off" />
+      <button class="primary-btn" id="ok" type="button">OK</button>
+      <div class="feedback" id="feedback"></div>
+
+      <div class="stats">
+        Richtig: <span id="stat-correct">0</span> / <span id="stat-total">30</span><br>
+        Beim ersten Versuch richtig: <span id="stat-first">0</span><br>
+        Falsche Versuche: <span id="stat-wrong">0</span>
+      </div>
+    </div>
+
+    <div id="done" class="hidden result">
+      <h2>Fertig! 🎉</h2>
+      <p id="summary"></p>
+      <p style="font-size:.9rem;color:#4b5563;">
+        Du kannst dieses Fenster jetzt schließen<br>
+        und zu LearningView zurückkehren.
+      </p>
+      <button class="primary-btn" id="restart" type="button">Nochmal</button>
+    </div>
+  </div>
+
+<script>
+  const TOTAL_QUESTIONS = 30;
+  const MIN_F = 1;
+  const MAX_F = 20;
+
+  // Mode: "mix" | "mul" | "div"
+  let mode = "mix";
+
+  let solved = 0;
+  let attemptsCurrent = 0;
+  let correctFirst = 0;
+  let wrongTotal = 0;
+
+  let current = null; // {type, a, b, p, unknown, displayParts, answer}
+
+  const elProgress = document.getElementById('progress');
+  const elTaskType = document.getElementById('task-type');
+  const elEquation = document.getElementById('equation');
+  const elTop = document.getElementById('label-top');
+  const elLeft = document.getElementById('label-left');
+  const elCenter = document.getElementById('label-center');
+
+  const input = document.getElementById('answer');
+  const btnOk = document.getElementById('ok');
+  const fb = document.getElementById('feedback');
+
+  const statCorrect = document.getElementById('stat-correct');
+  const statTotal = document.getElementById('stat-total');
+  const statFirst = document.getElementById('stat-first');
+  const statWrong = document.getElementById('stat-wrong');
+
+  const quiz = document.getElementById('quiz');
+  const done = document.getElementById('done');
+  const summary = document.getElementById('summary');
+  const restart = document.getElementById('restart');
+
+  statTotal.textContent = String(TOTAL_QUESTIONS);
+
+  // Mode Buttons
+  const bMix = document.getElementById('mode-mix');
+  const bMul = document.getElementById('mode-mul');
+  const bDiv = document.getElementById('mode-div');
+
+  bMix.addEventListener('click', () => setMode("mix"));
+  bMul.addEventListener('click', () => setMode("mul"));
+  bDiv.addEventListener('click', () => setMode("div"));
+
+  function setMode(m){
+    mode = m;
+    [bMix,bMul,bDiv].forEach(b => b.classList.remove('active'));
+    if (m==="mix") bMix.classList.add('active');
+    if (m==="mul") bMul.classList.add('active');
+    if (m==="div") bDiv.classList.add('active');
+    resetRun();
+  }
+
+  btnOk.addEventListener('click', check);
+  input.addEventListener('keydown', (e)=>{ if(e.key==="Enter") check(); });
+
+  restart.addEventListener('click', () => {
+    done.classList.add('hidden');
+    quiz.classList.remove('hidden');
+    resetRun();
+  });
+
+  function resetRun(){
+    solved = 0;
+    attemptsCurrent = 0;
+    correctFirst = 0;
+    wrongTotal = 0;
+    statCorrect.textContent = "0";
+    statFirst.textContent = "0";
+    statWrong.textContent = "0";
+    fb.textContent = "";
+    fb.className = "feedback";
+    next();
+  }
+
+  function next(){
+    attemptsCurrent = 0;
+    fb.textContent = "";
+    fb.className = "feedback";
+    input.value = "";
+    input.focus();
+
+    current = generateTask();
+    renderTask(current);
+
+    elProgress.textContent = `Aufgabe ${solved + 1} von ${TOTAL_QUESTIONS}`;
+  }
+
+  // Task types:
+  // MUL_PRODUCT: a × b = ?  (unknown = product)
+  // MUL_FACTOR_A: ? × b = p (unknown = a)
+  // MUL_FACTOR_B: a × ? = p (unknown = b)
+  // DIV_QUOTIENT: p ÷ b = ? (unknown = a)  (a = quotient)
+  // DIV_DIVISOR:  p ÷ ? = a (unknown = b)  (b = divisor)
+  function generateTask(){
+    const a = randInt(MIN_F, MAX_F);
+    const b = randInt(MIN_F, MAX_F);
+    const p = a * b;
+
+    const typesMul = ["MUL_PRODUCT","MUL_FACTOR_A","MUL_FACTOR_B"];
+    const typesDiv = ["DIV_QUOTIENT","DIV_DIVISOR"];
+
+    let t;
+    if (mode === "mul") t = choice(typesMul);
+    else if (mode === "div") t = choice(typesDiv);
+    else t = choice(typesMul.concat(typesDiv));
+
+    // Damit Division sauber bleibt: wir nutzen p = a*b immer ganzzahlig.
+    return { type: t, a, b, p };
+  }
+
+  function renderTask(task){
+    // Standardwerte fürs Rechteck:
+    // Breite = b, Höhe = a, Mitte = p (je nach gesuchter Zahl mit rotem ?)
+    let topTxt = String(task.b);
+    let leftTxt = String(task.a);
+    let centerTxt = String(task.p);
+
+    let eq = "";
+    let typeLabel = "";
+    let correctAnswer;
+
+    const Q = `<span class="q">?</span>`;
+
+    switch(task.type){
+      case "MUL_PRODUCT":
+        // a × b = ?
+        typeLabel = "Multiplikation – Produkt suchen";
+        topTxt = String(task.b);
+        leftTxt = String(task.a);
+        centerTxt = Q;
+        eq = `${task.a} × ${task.b} = ?`;
+        correctAnswer = task.p;
+        break;
+
+      case "MUL_FACTOR_A":
+        // ? × b = p  (a gesucht)
+        typeLabel = "Multiplikation – Faktor suchen";
+        topTxt = String(task.b);
+        leftTxt = Q;
+        centerTxt = String(task.p);
+        eq = `? × ${task.b} = ${task.p}`;
+        correctAnswer = task.a;
+        break;
+
+      case "MUL_FACTOR_B":
+        // a × ? = p  (b gesucht)
+        typeLabel = "Multiplikation – Faktor suchen";
+        topTxt = Q;
+        leftTxt = String(task.a);
+        centerTxt = String(task.p);
+        eq = `${task.a} × ? = ${task.p}`;
+        correctAnswer = task.b;
+        break;
+
+      case "DIV_QUOTIENT":
+        // p ÷ b = ?  (a gesucht)
+        typeLabel = "Division – Ergebnis suchen";
+        // Rechteckmodell: Produkt in Mitte = p, Breite = b, Höhe = ? (a)
+        topTxt = String(task.b);
+        leftTxt = Q;
+        centerTxt = String(task.p);
+        eq = `${task.p} ÷ ${task.b} = ?`;
+        correctAnswer = task.a;
+        break;
+
+      case "DIV_DIVISOR":
+        // p ÷ ? = a  (b gesucht)
+        typeLabel = "Division – Teiler suchen";
+        topTxt = Q;
+        leftTxt = String(task.a);
+        centerTxt = String(task.p);
+        eq = `${task.p} ÷ ? = ${task.a}`;
+        correctAnswer = task.b;
+        break;
+    }
+
+    task.answer = correctAnswer;
+
+    elTaskType.textContent = typeLabel;
+    elEquation.innerHTML = eq.replaceAll("?", Q); // rotes ? auch in Gleichung
+
+    elTop.innerHTML = topTxt;
+    elLeft.innerHTML = leftTxt;
+    elCenter.innerHTML = centerTxt;
+
+    // Rechteck skalieren nach Faktoren (optisch, aber begrenzt)
+    // Breite ~ b, Höhe ~ a (immer mit den echten Faktoren, auch wenn ?)
+    const rect = document.getElementById('rect');
+    const scaleW = (task.b / MAX_F);
+    const scaleH = (task.a / MAX_F);
+
+    // Basismass + Skalierung (nicht zu klein / nicht zu gross)
+    const baseW = 240, baseH = 160;
+    const extraW = 220, extraH = 170;
+
+    const w = clamp(baseW + extraW * scaleW, 240, 520);
+    const h = clamp(baseH + extraH * scaleH, 160, 420);
+
+    rect.style.width = w + "px";
+    rect.style.height = h + "px";
+  }
+
+  function check(){
+    const v = input.value.trim();
+    if(v===""){
+      fb.textContent = "Bitte gib eine Zahl ein.";
+      fb.className = "feedback error";
+      input.focus();
+      return;
+    }
+    const given = Number(v);
+    if(!Number.isFinite(given)){
+      fb.textContent = "Das ist keine gültige Zahl.";
+      fb.className = "feedback error";
+      input.focus();
+      return;
+    }
+
+    attemptsCurrent++;
+
+    if(given === current.answer){
+      if(attemptsCurrent === 1) correctFirst++;
+      solved++;
+
+      statCorrect.textContent = String(solved);
+      statFirst.textContent = String(correctFirst);
+
+      fb.textContent = "Richtig! 👍";
+      fb.className = "feedback ok";
+
+      if(solved >= TOTAL_QUESTIONS){
+        finish();
+      }else{
+        setTimeout(next, 450);
+      }
+    }else{
+      wrongTotal++;
+      statWrong.textContent = String(wrongTotal);
+      fb.textContent = "Leider falsch. Versuch es nochmal!";
+      fb.className = "feedback error";
+      input.select();
+      input.focus();
+    }
+  }
+
+  function finish(){
+    quiz.classList.add('hidden');
+    done.classList.remove('hidden');
+
+    const quote = (correctFirst / TOTAL_QUESTIONS * 100).toFixed(0);
+    summary.innerHTML =
+      `Du hast <strong>${TOTAL_QUESTIONS}</strong> Aufgaben gelöst.<br>` +
+      `<strong>${correctFirst}</strong> waren beim ersten Versuch richtig (<strong>${quote}%</strong>).<br>` +
+      `Falsche Versuche insgesamt: <strong>${wrongTotal}</strong>.`;
+
+    // LearningView: Aufgabe erledigt
+    try{
+      if(window.parent && window.parent !== window){
+        window.parent.postMessage('AppSolved','*');
+      }
+    }catch(e){
+      console.warn('postMessage AppSolved nicht möglich:', e);
+    }
+  }
+
+  function randInt(min,max){
+    return Math.floor(Math.random()*(max-min+1))+min;
+  }
+  function choice(arr){
+    return arr[Math.floor(Math.random()*arr.length)];
+  }
+  function clamp(x,min,max){
+    return Math.max(min, Math.min(max, x));
+  }
+
+  // Start
+  resetRun();
+</script>
+</body>
+</html>
